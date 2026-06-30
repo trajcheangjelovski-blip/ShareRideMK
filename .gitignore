@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+build/
+
+# env (real secrets must never be committed)
+.env
+.env.local
+.env*.local
+
+# logs & os
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# temp / office lock files
+*.tmp
+.~lock.*#
+
+# next types
+next-env.d.ts
