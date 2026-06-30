@@ -9,6 +9,14 @@ async function createTrip(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Само одобрени профили смеат да објавуваат патувања.
+  const { data: me } = await supabase.from("users").select("status").eq("id", user.id).single();
+  if (me?.status !== "active") {
+    redirect(`/dashboard/driver/create-trip?error=${encodeURIComponent(
+      "Профилот е под дополнителна верификација — не можеш да објавуваш патувања додека не се верифицираш."
+    )}`);
+  }
+
   const seats = Number(formData.get("available_seats"));
   const { error } = await supabase.from("trips").insert({
     driver_id: user.id,

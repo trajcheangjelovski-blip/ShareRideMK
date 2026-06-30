@@ -11,6 +11,14 @@ async function requestToJoin(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Само одобрени профили смеат да поднесуваат барања.
+  const { data: me } = await supabase.from("users").select("status").eq("id", user.id).single();
+  if (me?.status !== "active") {
+    redirect(`/dashboard/passenger/trips?error=${encodeURIComponent(
+      "Профилот е под дополнителна верификација — не можеш да поднесуваш барања додека не се верифицираш."
+    )}`);
+  }
+
   const tripId = String(formData.get("trip_id"));
   const seats = Number(formData.get("seats_requested"));
   const pickupLat = Number(formData.get("pickup_latitude"));

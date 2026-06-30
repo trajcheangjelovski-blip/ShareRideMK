@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
@@ -20,8 +21,9 @@ async function setUserStatus(formData: FormData) {
 
 const TABS = [
   { key: "pending", label: "На чекање" },
+  { key: "needs_verification", label: "Верификација" },
   { key: "active", label: "Одобрени" },
-  { key: "blocked", label: "Одбиени" },
+  { key: "blocked", label: "Блокирани" },
   { key: "all", label: "Сите" },
 ];
 
@@ -71,42 +73,60 @@ export default async function AdminUsersPage({
             style={{ "--d": `${i * 60}ms` } as React.CSSProperties}
             className="reveal card-hover flex flex-col gap-4 p-4 sm:flex-row sm:items-center"
           >
-            {/* Photo — главен фактор за веродостојност */}
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2 ring-brand/15">
-              {u.profile_image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={u.profile_image} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">нема</div>
-              )}
-            </div>
+            {/* Клик на левата страна → целосен профил */}
+            <Link href={`/admin/users/${u.id}`} className="flex min-w-0 flex-1 items-center gap-4">
+              {/* Photo — главен фактор за веродостојност */}
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2 ring-brand/15">
+                {u.profile_image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={u.profile_image} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">нема</div>
+                )}
+              </div>
 
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">
-                {u.first_name} {u.last_name}{" "}
-                <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-                  {u.is_driver ? "возач/патник" : "патник"}
-                </span>
-              </p>
-              <p className="text-sm text-slate-500">{u.email} · {u.phone ?? "без телефон"}</p>
-              <p className="text-xs text-slate-400">
-                Регистриран: {new Date(u.created_at).toLocaleString("mk-MK")}
-              </p>
-            </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium group-hover:text-brand-dark">
+                  {u.first_name} {u.last_name}{" "}
+                  <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                    {u.is_driver ? "возач/патник" : "патник"}
+                  </span>
+                </p>
+                <p className="text-sm text-slate-500">{u.email} · {u.phone ?? "без телефон"}</p>
+                <p className="text-xs text-slate-400">
+                  Регистриран: {new Date(u.created_at).toLocaleString("mk-MK")}
+                </p>
+                <p className="mt-0.5 text-xs font-medium text-brand">Види целосен профил →</p>
+              </div>
+            </Link>
 
             <div className="flex items-center gap-2">
               <StatusChip status={u.status} />
-              {u.status === "pending" && (
+              {u.role !== "admin" && (
                 <>
-                  <Action id={u.id} status="active" label="Прифати" cls="bg-green-600 hover:bg-green-700 text-white" />
-                  <Action id={u.id} status="blocked" label="Одбиј" cls="border hover:bg-slate-50" />
+                  {u.status === "pending" && (
+                    <>
+                      <Action id={u.id} status="active" label="Прифати" cls="bg-green-600 hover:bg-green-700 text-white" />
+                      <Action id={u.id} status="needs_verification" label="Верификација" cls="border text-amber-700 hover:bg-amber-50" />
+                      <Action id={u.id} status="blocked" label="Одбиј" cls="border text-red-600 hover:bg-red-50" />
+                    </>
+                  )}
+                  {u.status === "active" && (
+                    <>
+                      <Action id={u.id} status="needs_verification" label="Верификација" cls="border text-amber-700 hover:bg-amber-50" />
+                      <Action id={u.id} status="blocked" label="Блокирај" cls="border text-red-600 hover:bg-red-50" />
+                    </>
+                  )}
+                  {u.status === "needs_verification" && (
+                    <>
+                      <Action id={u.id} status="active" label="Прифати" cls="bg-green-600 hover:bg-green-700 text-white" />
+                      <Action id={u.id} status="blocked" label="Блокирај" cls="border text-red-600 hover:bg-red-50" />
+                    </>
+                  )}
+                  {(u.status === "blocked" || u.status === "deleted") && (
+                    <Action id={u.id} status="active" label="Реактивирај" cls="border text-green-700 hover:bg-green-50" />
+                  )}
                 </>
-              )}
-              {u.status === "active" && u.role !== "admin" && (
-                <Action id={u.id} status="blocked" label="Блокирај" cls="border hover:bg-red-50 text-red-600" />
-              )}
-              {u.status === "blocked" && (
-                <Action id={u.id} status="active" label="Реактивирај" cls="border hover:bg-green-50 text-green-700" />
               )}
             </div>
           </div>
@@ -129,14 +149,16 @@ function Action({ id, status, label, cls }: { id: string; status: string; label:
 function StatusChip({ status }: { status: string }) {
   const map: Record<string, string> = {
     pending: "bg-amber-100 text-amber-800",
+    needs_verification: "bg-orange-100 text-orange-800",
     active: "bg-green-100 text-green-800",
     blocked: "bg-red-100 text-red-700",
     deleted: "bg-slate-200 text-slate-600",
   };
   const label: Record<string, string> = {
     pending: "на чекање",
+    needs_verification: "доп. верификација",
     active: "одобрен",
-    blocked: "одбиен",
+    blocked: "блокиран",
     deleted: "избришан",
   };
   return (

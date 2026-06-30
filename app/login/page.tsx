@@ -7,17 +7,29 @@ async function login(formData: FormData) {
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
   const supabase = createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
+
+  // Целосно блокирани / избришани профили не смеат да останат логирани.
+  const { data: profile } = await supabase
+    .from("users")
+    .select("status")
+    .eq("id", data.user!.id)
+    .single();
+  if (profile && (profile.status === "blocked" || profile.status === "deleted")) {
+    await supabase.auth.signOut();
+    redirect("/login?blocked=1");
+  }
+
   redirect("/dashboard/passenger");
 }
 
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: { error?: string; blocked?: string };
 }) {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
@@ -32,6 +44,11 @@ export default function LoginPage({
           Macedonia Ride
         </Link>
         <h1 className="mb-6 text-2xl font-semibold">Најава</h1>
+        {searchParams.blocked && (
+          <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            Профилот е блокиран и не може да се најави. Ако мислиш дека е грешка, контактирај нè.
+          </p>
+        )}
         {searchParams.error && (
           <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
             {searchParams.error}

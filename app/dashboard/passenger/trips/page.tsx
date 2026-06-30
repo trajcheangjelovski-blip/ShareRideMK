@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "../page";
 
-export default async function MyTripsPage({ searchParams }: { searchParams: { sent?: string } }) {
+export default async function MyTripsPage({ searchParams }: { searchParams: { sent?: string; error?: string } }) {
   const supabase = createClient();
   const {
     data: { user },
@@ -23,6 +23,9 @@ export default async function MyTripsPage({ searchParams }: { searchParams: { se
         <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-700">
           Барањето е испратено. Чекаш одобрување од возачот.
         </p>
+      )}
+      {searchParams.error && (
+        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>
       )}
 
       <div className="mt-6 divide-y rounded-xl border">

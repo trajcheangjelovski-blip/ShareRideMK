@@ -22,10 +22,13 @@ export default async function DashboardLayout({
   // Админите си имаат свој панел.
   if (profile?.role === "admin") redirect("/admin");
 
-  // Корисниците мора да бидат одобрени од админ пред да користат сè.
-  if (profile && profile.status !== "active") {
-    return <AccountGate status={profile.status} name={profile.first_name} />;
+  // Целосен gate: чека одобрување или е блокиран/избришан (немаат пристап).
+  const status = profile?.status;
+  if (status === "pending" || status === "blocked" || status === "deleted") {
+    return <AccountGate status={status} name={profile?.first_name} />;
   }
+  // needs_verification → пристапот е дозволен, но акциите се ограничени (банер долу).
+  const needsVerification = status === "needs_verification";
 
   return (
     <div className="flex min-h-screen">
@@ -62,7 +65,27 @@ export default async function DashboardLayout({
         </form>
       </aside>
 
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 p-6">
+        {needsVerification && <VerifyBanner />}
+        {children}
+      </main>
+    </div>
+  );
+}
+
+function VerifyBanner() {
+  return (
+    <div className="reveal mb-6 flex flex-col gap-3 rounded-2xl border border-promo/40 bg-promo/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="font-semibold text-amber-800">Профилот е под дополнителна верификација</p>
+        <p className="text-sm text-amber-700">
+          Не можеш да поднесуваш барања ниту да објавуваш патувања додека повторно
+          не ја потврдиш сликата. Качи нова портретна слика за преглед од админ.
+        </p>
+      </div>
+      <Link href="/dashboard/verify" className="shrink-0 rounded-xl bg-promo px-5 py-2.5 text-center text-sm font-medium text-white transition hover:brightness-95">
+        Верификувај се
+      </Link>
     </div>
   );
 }
