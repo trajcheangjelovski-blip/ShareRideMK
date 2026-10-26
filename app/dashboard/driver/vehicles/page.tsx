@@ -40,27 +40,27 @@ export default async function VehiclesPage({ searchParams }: { searchParams: { e
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold">Возила</h1>
+      <h1 className="page-title">Возила</h1>
       {searchParams.error && (
-        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>
+        <p className="mt-3 alert-error">{searchParams.error}</p>
       )}
 
-      <form action={addVehicle} className="mt-6 grid grid-cols-2 gap-3 rounded-xl border p-4 text-sm">
-        <input name="make" placeholder="Марка" required className="rounded-lg border px-3 py-2" />
-        <input name="model" placeholder="Модел" required className="rounded-lg border px-3 py-2" />
-        <input name="year" type="number" placeholder="Година" className="rounded-lg border px-3 py-2" />
-        <input name="color" placeholder="Боја" className="rounded-lg border px-3 py-2" />
-        <input name="license_plate" placeholder="Регистрација" required className="rounded-lg border px-3 py-2" />
-        <input name="seats" type="number" min={1} max={8} placeholder="Седишта" required className="rounded-lg border px-3 py-2" />
+      <form action={addVehicle} className="mt-6 grid grid-cols-2 gap-3 card p-4 text-sm">
+        <input name="make" placeholder="Марка" required className="input" />
+        <input name="model" placeholder="Модел" required className="input" />
+        <input name="year" type="number" placeholder="Година" className="input" />
+        <input name="color" placeholder="Боја" className="input" />
+        <input name="license_plate" placeholder="Регистрација" required className="input" />
+        <input name="seats" type="number" min={1} max={8} placeholder="Седишта" required className="input" />
         <label className="col-span-2 flex items-center gap-2"><input type="checkbox" name="has_ac" /> Има клима</label>
-        <button className="col-span-2 rounded-lg bg-brand py-2 font-medium text-white hover:bg-brand-dark">
+        <button className="btn-primary col-span-2 !py-2.5">
           Додај возило
         </button>
       </form>
 
       <div className="mt-6 space-y-2">
         {(vehicles ?? []).map((v) => (
-          <div key={v.id} className="rounded-xl border p-4 text-sm">
+          <div key={v.id} className="card p-4 text-sm">
             <p className="font-medium">{v.make} {v.model} {v.year ? `(${v.year})` : ""}</p>
             <p className="text-slate-500">{v.color} · {v.seats} седишта · {v.license_plate} {v.has_ac ? "· клима" : ""}</p>
           </div>

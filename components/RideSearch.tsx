@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatTime, fullName, todayISO } from "@/lib/format";
 import { Avatar } from "@/components/Avatar";
+import { Icon } from "@/components/Icon";
+import { SearchForm } from "@/components/SearchForm";
 
 export type RideSearchParams = { from?: string; to?: string; date?: string };
 
@@ -23,7 +25,7 @@ export async function RideSearch({ searchParams }: { searchParams: RideSearchPar
 
   let q = supabase
     .from("trips")
-    .select("id, driver_id, departure_date, departure_time, price_per_seat, available_seats, is_promoted, start_city:start_city_id(name), end_city:end_city_id(name)")
+    .select("id, driver_id, departure_date, departure_time, price_per_seat, available_seats, is_promoted, luggage_allowed, start_city:start_city_id(name), end_city:end_city_id(name), vehicle:vehicle_id(has_ac)")
     .eq("status", "published")
     .gt("available_seats", 0);
   if (fromId) q = q.eq("start_city_id", fromId);
@@ -49,78 +51,83 @@ export async function RideSearch({ searchParams }: { searchParams: RideSearchPar
   const ratingById = new Map((ratings ?? []).map((r: any) => [r.user_id, r]));
 
   const filtered = Boolean(fromId || toId || date);
-  const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30";
+  const heading = fromId || toId
+    ? `${searchParams.from ?? "Сите градови"} → ${searchParams.to ?? "сите градови"}`
+    : "Следни патувања";
 
   return (
     <div>
-      <form className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-soft sm:flex-row sm:items-end">
-        <Field label="Од">
-          <select name="from" defaultValue={searchParams.from ?? ""} className={selectCls}>
-            <option value="">Сите градови</option>
-            {cities?.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-          </select>
-        </Field>
-        <Field label="До">
-          <select name="to" defaultValue={searchParams.to ?? ""} className={selectCls}>
-            <option value="">Сите градови</option>
-            {cities?.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-          </select>
-        </Field>
-        <Field label="Датум">
-          <input name="date" type="date" min={today} defaultValue={date} className={selectCls} />
-        </Field>
-        <button className="btn-primary !py-2.5">Барај</button>
-      </form>
+      <SearchForm cities={cities ?? []} today={today} defaults={{ from: searchParams.from, to: searchParams.to, date }} />
 
-      <p className="mt-6 text-sm font-medium text-slate-500">
-        {filtered ? `Пронајдени патувања: ${trips.length}` : "Следни патувања"}
-      </p>
+      <div className="mt-8 flex items-baseline justify-between gap-3">
+        <h2 className="text-lg font-bold text-ink">{heading}</h2>
+        <p className="text-sm text-slate-500">
+          {trips.length} {trips.length === 1 ? "патување" : "патувања"}{date ? ` · ${formatDate(date)}` : ""}
+        </p>
+      </div>
 
       <div className="mt-3 space-y-3">
         {trips.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-            Нема слободни патувања {filtered ? "за оваа рута и датум" : "во моментов"}. Обиди се со друг датум
-            или провери подоцна.
+          <div className="card flex flex-col items-center px-6 py-12 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><Icon name="car" size={24} /></span>
+            <p className="mt-4 font-semibold text-ink">Нема слободни патувања {filtered ? "за ова пребарување" : "во моментов"}</p>
+            <p className="mt-1 max-w-sm text-sm text-slate-500">
+              Обиди се со друг датум или без краен град — возачите често објавуваат патувања еден до два дена однапред.
+            </p>
           </div>
         )}
         {trips.map((t, i) => {
           const driver = profileById.get(t.driver_id);
           const rating = ratingById.get(t.driver_id);
+          const avg = Number(rating?.rating_average ?? 0);
           return (
             <Link
               key={t.id}
               href={`/dashboard/passenger/trips/${t.id}`}
               style={{ "--d": `${i * 50}ms` } as React.CSSProperties}
-              className={`reveal card-hover group block p-4 ${t.is_promoted ? "!border-promo/40 bg-promo/5 hover:!shadow-glow-promo" : ""}`}
+              className={`reveal card-hover group block overflow-hidden ${t.is_promoted ? "!border-promo/50 ring-1 ring-promo/20" : ""}`}
             >
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-semibold">
-                    {t.start_city?.name} → {t.end_city?.name}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    {formatDate(t.departure_date)} · {formatTime(t.departure_time)}
-                  </p>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                    <Avatar src={driver?.profile_image} />
-                    <span className="truncate">{fullName(driver)}</span>
-                    {rating && Number(rating.rating_average) > 0 && (
-                      <span className="text-amber-600">★ {Number(rating.rating_average).toFixed(1)}</span>
-                    )}
+              <div className="flex gap-4 p-4 sm:p-5">
+                {/* time + date */}
+                <div className="w-16 shrink-0">
+                  <p className="text-xl font-extrabold tracking-tight text-ink">{formatTime(t.departure_time)}</p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-500">{formatDate(t.departure_date)}</p>
+                </div>
+                {/* route line */}
+                <div className="flex min-w-0 flex-1 gap-3">
+                  <div className="flex flex-col items-center pt-1.5" aria-hidden>
+                    <span className="h-2.5 w-2.5 rounded-full border-2 border-brand bg-white" />
+                    <span className="my-1 w-0.5 flex-1 rounded bg-gradient-to-b from-brand to-cyan-700" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-800" />
+                  </div>
+                  <div className="flex min-w-0 flex-col justify-between gap-3">
+                    <p className="truncate font-semibold text-ink">{t.start_city?.name}</p>
+                    <p className="truncate font-semibold text-ink">{t.end_city?.name}</p>
                   </div>
                 </div>
+                {/* price */}
                 <div className="shrink-0 text-right">
-                  {t.is_promoted && (
-                    <span className="mb-1 inline-block rounded-full bg-promo px-2 py-0.5 text-[10px] font-semibold text-white">
-                      Промовирано
+                  <p className="text-xl font-extrabold text-brand-dark">{Number(t.price_per_seat)}<span className="ml-1 text-sm font-bold">ден</span></p>
+                  <p className="mt-0.5 flex items-center justify-end gap-1 text-xs text-slate-500">
+                    <Icon name="seat" size={13} /> {t.available_seats} {t.available_seats === 1 ? "место" : "места"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 sm:px-5">
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  <Avatar src={driver?.profile_image} size={26} />
+                  <span className="truncate font-medium text-slate-700">{fullName(driver)}</span>
+                  {avg > 0 && (
+                    <span className="flex items-center gap-0.5 text-xs font-semibold text-amber-600">
+                      <Icon name="star" size={12} className="fill-amber-400 text-amber-400" /> {avg.toFixed(1)}
                     </span>
                   )}
-                  <p className="text-lg font-bold text-brand-dark transition-transform duration-300 group-hover:scale-105">
-                    {Number(t.price_per_seat)} ден
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {t.available_seats} {t.available_seats === 1 ? "слободно место" : "слободни места"}
-                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 text-slate-400">
+                  {t.is_promoted && <span className="rounded-full bg-promo px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Промовирано</span>}
+                  {t.vehicle?.has_ac && <span className="hidden text-xs sm:inline">Клима</span>}
+                  {t.luggage_allowed && <span className="hidden text-xs sm:inline">· Багаж</span>}
+                  <Icon name="arrow" size={16} className="transition group-hover:translate-x-0.5 group-hover:text-brand" />
                 </div>
               </div>
             </Link>
@@ -128,14 +135,5 @@ export async function RideSearch({ searchParams }: { searchParams: RideSearchPar
         })}
       </div>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex-1 text-sm">
-      <span className="mb-1 block font-medium text-slate-600">{label}</span>
-      {children}
-    </label>
   );
 }

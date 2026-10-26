@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LocationPicker } from "./LocationPicker";
-import { MARKER } from "./index";
+import { MARKER } from "./markers";
 import { decodePolyline } from "@/lib/geo/polyline";
 import { computeDetour, type LatLng } from "@/lib/geo/detour";
 import type { Place } from "@/lib/geo/geocode";

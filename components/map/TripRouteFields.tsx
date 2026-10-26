@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { LocationPicker } from "./LocationPicker";
-import { MARKER } from "./index";
+import { MARKER } from "./markers";
 import { getDrivingRoute, type Route } from "@/lib/geo/routing";
 import type { Place } from "@/lib/geo/geocode";
 
@@ -38,7 +38,7 @@ export function TripRouteFields({ cities }: { cities: City[] }) {
     return () => { cancelled = true; clearTimeout(t); };
   }, [start?.lat, start?.lng, dest?.lat, dest?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5";
+  const selectCls = "input";
   const sameCity = startCity !== "" && startCity === endCity;
 
   return (

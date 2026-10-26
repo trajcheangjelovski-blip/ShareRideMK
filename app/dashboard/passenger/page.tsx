@@ -29,7 +29,7 @@ export default async function PassengerOverview() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Преглед</h1>
+      <h1 className="page-title">Преглед</h1>
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Kpi label="Барања во чекање" value={pending ?? 0} />
@@ -38,13 +38,13 @@ export default async function PassengerOverview() {
       </div>
 
       <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-lg font-medium">Последни барања</h2>
+        <h2 className="text-lg font-bold text-ink">Последни барања</h2>
         <Link href="/dashboard/passenger/find" className="btn-primary !px-4 !py-2 text-sm">
           Најди превоз
         </Link>
       </div>
 
-      <div className="mt-4 divide-y rounded-xl border">
+      <div className="mt-4 card divide-y divide-slate-100 overflow-hidden">
         {(bookings ?? []).length === 0 && (
           <p className="p-4 text-sm text-slate-500">Сè уште немаш барања.</p>
         )}

@@ -75,7 +75,7 @@ export function DriverBroadcaster({ tripId, driverId }: { tripId: string; driver
         </p>
         <p className="mt-0.5 text-xs text-cyan-800">
           {error ?? (lastSent
-            ? `Последно испратено: ${lastSent.toLocaleTimeString("mk-MK")}. Држи ја страницата отворена.`
+            ? `Последно испратено: ${lastSent.toTimeString().slice(0, 8)}. Држи ја страницата отворена.`
             : "Се чека GPS сигнал…")}
         </p>
       </div>

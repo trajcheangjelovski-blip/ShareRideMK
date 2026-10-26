@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { uploadAvatar } from "@/lib/storage/avatar";
+import { AuthShell } from "@/components/AuthShell";
+import { Icon, type IconName } from "@/components/Icon";
 
 async function register(formData: FormData) {
   "use server";
@@ -62,30 +64,20 @@ export default function RegisterPage({
 }: {
   searchParams: { error?: string };
 }) {
-  const inputCls =
-    "w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30";
+  const inputCls = "input py-3";
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-10">
-      <div aria-hidden className="absolute inset-0 -z-10">
-        <div className="blob -right-20 top-0 h-96 w-96 animate-blob bg-brand-light/50" />
-        <div className="blob -left-16 bottom-0 h-80 w-80 animate-blob bg-teal-200/50" style={{ animationDelay: "4s" }} />
-        <div className="absolute inset-0 bg-hero-radial" />
-      </div>
-
-      <div className="reveal glass w-full max-w-md rounded-3xl p-8 shadow-lift">
-        <Link href="/" className="mb-8 block text-center text-xl font-bold text-gradient">
-          Macedonia Ride
-        </Link>
-        <h1 className="mb-6 text-2xl font-semibold">Регистрација</h1>
-        {searchParams.error && (
-          <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
-            {searchParams.error}
-          </p>
-        )}
-        <p className="mb-4 rounded-xl bg-brand/5 p-3 text-xs leading-relaxed text-brand-dark">
-          Сите полиња се задолжителни <span className="text-red-500">*</span>. Секоја
-          регистрација се прегледува рачно — профилот се активира откако админ ќе ги
-          потврди податоците.
+    <AuthShell
+      title="Креирај профил"
+      subtitle="Една регистрација — и за патување и за нудење превоз."
+      footer={<>Веќе имаш профил?{" "}<Link href="/login" className="font-semibold text-brand-dark hover:underline">Најави се</Link></>}
+    >
+        {searchParams.error && <p className="alert-error mb-4">{searchParams.error}</p>}
+        <p className="mb-5 flex gap-2.5 rounded-xl border border-brand/15 bg-brand/5 p-3 text-xs leading-relaxed text-brand-dark">
+          <Icon name="shield" size={18} className="shrink-0" />
+          <span>
+            Сите полиња се задолжителни. Секоја регистрација се прегледува рачно — профилот се активира откако админ ќе ги
+            потврди податоците.
+          </span>
         </p>
         <form action={register} className="flex flex-col gap-4">
           <div className="flex gap-3">
@@ -97,13 +89,13 @@ export default function RegisterPage({
             </Field>
           </div>
           <Field label="Email">
-            <input name="email" type="email" placeholder="Email" required className={inputCls} />
+            <input name="email" type="email" autoComplete="email" placeholder="ime@primer.mk" required className={inputCls} />
           </Field>
           <Field label="Телефон">
-            <input name="phone" type="tel" placeholder="пр. 070123456" required className={inputCls} />
+            <input name="phone" type="tel" autoComplete="tel" placeholder="пр. 070123456" required className={inputCls} />
           </Field>
           <Field label="Лозинка">
-            <input name="password" type="password" placeholder="мин. 8 знаци" required className={inputCls} />
+            <input name="password" type="password" autoComplete="new-password" placeholder="мин. 8 знаци" minLength={8} required className={inputCls} />
           </Field>
           {/*
             Портретната слика е ЗАДОЛЖИТЕЛНА поради безбедност и доверба:
@@ -112,37 +104,43 @@ export default function RegisterPage({
             намалува ризикот од лажни профили и обезбедува отчетност (јасно е
             кој е во возилото). Ова е клучен trust-фактор за carpool платформа.
           */}
-          <label className="text-sm">
-            <span className="mb-1 block font-medium text-slate-600">
-              Портретна слика <span className="text-red-500">*</span>
-              <span className="ml-1 text-xs font-normal text-slate-400">(задолжително)</span>
-            </span>
+          <fieldset>
+            <legend className="label">Како ќе ја користиш платформата?</legend>
+            <div className="grid grid-cols-3 gap-2">
+              <RoleOption value="passenger" icon="user" label="Патник" defaultChecked />
+              <RoleOption value="driver" icon="car" label="Возач" />
+              <RoleOption value="both" icon="users" label="Двете" />
+            </div>
+          </fieldset>
+          <label className="block">
+            <span className="label">Портретна слика</span>
             <input name="photo" type="file" accept="image/png,image/jpeg,image/webp" required
-              className="w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm
-                         file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5
-                         file:text-white file:transition hover:file:bg-brand-dark" />
-            <span className="mt-1.5 block text-xs leading-relaxed text-slate-500">
-              Потребна е за безбедност и доверба — возачот и патникот да се
-              препознаат при качување и да се спречат лажни профили.
+              className="w-full cursor-pointer rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-600
+                         transition hover:border-brand hover:bg-brand/5
+                         file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5
+                         file:font-semibold file:text-white file:transition hover:file:bg-brand-dark" />
+            <span className="mt-1.5 flex gap-1.5 text-xs leading-relaxed text-slate-500">
+              <Icon name="camera" size={14} className="mt-0.5 shrink-0" />
+              Јасна слика од лицето — возачот и патникот да се препознаат при качување. JPG, PNG или WEBP до 5MB.
             </span>
           </label>
-          <Field label="Улога">
-            <select name="role" className={inputCls} defaultValue="passenger" required>
-              <option value="passenger">Патник</option>
-              <option value="driver">Возач</option>
-              <option value="both">И патник и возач</option>
-            </select>
-          </Field>
-          <button className="btn-primary mt-1">Креирај профил</button>
+          <button className="btn-primary mt-2 w-full">Креирај профил</button>
         </form>
-        <p className="mt-5 text-center text-sm text-slate-600">
-          Веќе имаш профил?{" "}
-          <Link href="/login" className="font-medium text-brand-dark hover:underline">
-            Најави се
-          </Link>
-        </p>
-      </div>
-    </main>
+    </AuthShell>
+  );
+}
+
+function RoleOption({ value, icon, label, defaultChecked }: { value: string; icon: IconName; label: string; defaultChecked?: boolean }) {
+  return (
+    <label className="cursor-pointer">
+      <input type="radio" name="role" value={value} defaultChecked={defaultChecked} required className="peer sr-only" />
+      <span className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-3 text-sm font-semibold text-slate-600 transition
+                       hover:border-slate-300 peer-checked:border-brand peer-checked:bg-brand/5 peer-checked:text-brand-dark peer-checked:ring-4 peer-checked:ring-brand/10
+                       peer-focus-visible:ring-4 peer-focus-visible:ring-brand/30">
+        <Icon name={icon} size={20} />
+        {label}
+      </span>
+    </label>
   );
 }
 
@@ -156,10 +154,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className={`text-sm ${className ?? ""}`}>
-      <span className="mb-1 block font-medium text-slate-600">
-        {label} <span className="text-red-500">*</span>
-      </span>
+    <label className={`block ${className ?? ""}`}>
+      <span className="label">{label}</span>
       {children}
     </label>
   );

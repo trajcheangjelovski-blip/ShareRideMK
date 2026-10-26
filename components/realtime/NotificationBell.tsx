@@ -94,7 +94,7 @@ export function NotificationBell({ userId, align = "left" }: { userId: string; a
       </button>
 
       {open && (
-        <div className={`absolute z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border bg-white shadow-lift ${align === "right" ? "right-0" : "left-0"}`}>
+        <div className={`absolute z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden card shadow-lift ${align === "right" ? "right-0" : "left-0"}`}>
           <div className="flex items-center justify-between border-b px-4 py-2.5">
             <p className="text-sm font-semibold">Известувања</p>
             {unread > 0 && (

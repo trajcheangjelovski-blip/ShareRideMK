@@ -77,7 +77,7 @@ export default async function ProfilePage({
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold">Мој профил</h1>
+      <h1 className="page-title">Мој профил</h1>
 
       {/* Лични податоци + слика */}
       <form action={updateProfile} className="reveal card-hover mt-6 p-6">

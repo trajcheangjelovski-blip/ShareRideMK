@@ -17,11 +17,19 @@ export function nowSkopje(): string {
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
 }
 
+// Names are spelled out instead of using toLocaleString("mk-MK"): browsers
+// without Macedonian locale data silently fall back to English ("Oct 26, 03:34 PM"),
+// and server and client output must match.
+const MONTHS = ["јан", "фев", "мар", "апр", "мај", "јун", "јул", "авг", "сеп", "окт", "ное", "дек"];
+const WEEKDAYS = ["нед", "пон", "вто", "сре", "чет", "пет", "саб"];
+
 // "2026-10-26" → "пон, 26 окт"
 export function formatDate(iso?: string | null): string {
   if (!iso) return "";
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString("mk-MK", { weekday: "short", day: "numeric", month: "short" });
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return `${WEEKDAYS[weekday]}, ${d} ${MONTHS[m - 1]}`;
 }
 
 // "08:30:00" → "08:30"
@@ -29,12 +37,14 @@ export function formatTime(t?: string | null): string {
   return t ? t.slice(0, 5) : "";
 }
 
-// ISO timestamp → "26 окт, 14:05"
+// ISO timestamp → "26 окт, 14:05" (Skopje time)
 export function formatDateTime(ts?: string | null): string {
   if (!ts) return "";
-  return new Date(ts).toLocaleString("mk-MK", {
-    timeZone: TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-  });
+  const p = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date(ts));
+  const get = (t: string) => p.find((x) => x.type === t)?.value ?? "";
+  return `${Number(get("day"))} ${MONTHS[Number(get("month")) - 1]}, ${get("hour")}:${get("minute")}`;
 }
 
 export function fullName(p?: { first_name?: string | null; last_initial?: string | null } | null): string {

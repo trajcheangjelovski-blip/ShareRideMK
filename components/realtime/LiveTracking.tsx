@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MapView, MARKER } from "@/components/map";
+import { MapView } from "@/components/map";
+import { MARKER } from "@/components/map/markers";
 import { decodePolyline } from "@/lib/geo/polyline";
 import { haversineKm, type LatLng } from "@/lib/geo/detour";
 import { getDrivingRoute } from "@/lib/geo/routing";
@@ -97,7 +98,7 @@ export function LiveTracking({
   ];
 
   return (
-    <div className="overflow-hidden rounded-2xl border bg-white">
+    <div className="overflow-hidden card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 text-sm">
         <p className="flex items-center gap-2 font-semibold">
           <span className={`h-2.5 w-2.5 rounded-full ${vehicle && !stale ? "animate-pulse bg-green-500" : "bg-slate-300"}`} />

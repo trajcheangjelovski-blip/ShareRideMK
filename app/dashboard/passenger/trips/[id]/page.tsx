@@ -6,7 +6,8 @@ import { submitReview } from "@/lib/actions/reviews";
 import { formatDate, formatTime, fullName } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Avatar } from "@/components/Avatar";
-import { MapView, MARKER } from "@/components/map";
+import { MapView } from "@/components/map";
+import { MARKER } from "@/components/map/markers";
 import { BookingFields } from "@/components/map/BookingFields";
 import { Chat } from "@/components/realtime/Chat";
 import { LiveTracking } from "@/components/realtime/LiveTracking";
@@ -73,18 +74,18 @@ export default async function TripDetailPage({
     <div className="max-w-4xl space-y-6">
       <div>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold">{t.start_city?.name} → {t.end_city?.name}</h1>
+          <h1 className="page-title">{t.start_city?.name} → {t.end_city?.name}</h1>
           {t.status !== "published" && <StatusBadge status={t.status} />}
         </div>
         <p className="mt-1 text-slate-500">{formatDate(t.departure_date)} · {formatTime(t.departure_time)}</p>
       </div>
 
       {searchParams.sent && (
-        <p className="rounded-xl bg-green-50 p-3 text-sm text-green-700">
+        <p className="alert-success">
           Барањето е испратено. Ќе добиеш известување кога возачот ќе одговори — во меѓувреме можеш да му пишеш подолу.
         </p>
       )}
-      {searchParams.error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>}
+      {searchParams.error && <p className="alert-error">{searchParams.error}</p>}
 
       {live ? (
         <LiveTracking tripId={t.id} routePolyline={t.route_polyline} start={start} dest={dest}
@@ -126,7 +127,7 @@ export default async function TripDetailPage({
 
       {/* Booking state */}
       {booking && (
-        <div className="flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 card p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm">
             <p className="flex items-center gap-2 font-semibold">Твое барање <StatusBadge status={booking.status} /></p>
             <p className="mt-1 text-slate-500">
@@ -158,7 +159,7 @@ export default async function TripDetailPage({
       )}
 
       {canBook && (
-        <form action={requestToJoin} className="space-y-4 rounded-2xl border bg-white p-4 shadow-soft sm:p-5">
+        <form action={requestToJoin} className="space-y-4 card p-4 shadow-soft sm:p-5">
           <input type="hidden" name="trip_id" value={t.id} />
           <div>
             <h2 className="font-semibold">Испрати барање за превоз</h2>
@@ -168,7 +169,7 @@ export default async function TripDetailPage({
           <div className="flex flex-col gap-3 sm:flex-row">
             <label className="text-sm sm:w-40">
               <span className="mb-1 block text-slate-600">Места</span>
-              <select name="seats_requested" defaultValue={1} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+              <select name="seats_requested" defaultValue={1} className="input">
                 {Array.from({ length: Math.min(t.available_seats, 8) }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
@@ -188,7 +189,7 @@ export default async function TripDetailPage({
       )}
 
       {/* Driver */}
-      <section className="space-y-4 rounded-2xl border bg-white p-4 sm:p-5">
+      <section className="space-y-4 card p-4 sm:p-5">
         <div className="flex items-center gap-3">
           <Avatar src={driver?.profile_image} size={48} />
           <div>
@@ -207,7 +208,7 @@ export default async function TripDetailPage({
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-white p-3">
+    <div className="card p-3">
       <p className="text-xs text-slate-500">{label}</p>
       <p className="mt-0.5 font-medium">{value}</p>
     </div>

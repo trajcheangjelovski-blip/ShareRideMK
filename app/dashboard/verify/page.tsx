@@ -52,7 +52,7 @@ export default async function VerifyPage({
 
   return (
     <div className="max-w-xl">
-      <h1 className="text-2xl font-semibold">Дополнителна верификација</h1>
+      <h1 className="page-title">Дополнителна верификација</h1>
       <p className="mt-2 text-sm text-slate-600">
         Администраторот побара повторна потврда на твојата фотографија (можеби
         претходната не беше јасна или веродостојна). Качи нова, јасна портретна
@@ -62,7 +62,7 @@ export default async function VerifyPage({
 
       <form action={resubmitVerification} className="reveal card-hover mt-6 p-6">
         {searchParams.error && (
-          <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>
+          <p className="mb-4 alert-error">{searchParams.error}</p>
         )}
 
         <div className="flex items-center gap-4">

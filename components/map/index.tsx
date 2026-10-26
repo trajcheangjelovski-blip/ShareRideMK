@@ -9,12 +9,4 @@ export const MapView = dynamic(() => import("./MapView"), {
 });
 
 export type { MapMarker, MapViewProps } from "./MapView";
-
-// Marker colors used across the app.
-export const MARKER = {
-  start: "#0f766e",
-  end: "#155e75",
-  pickup: "#16a34a",
-  dropoff: "#dc2626",
-  vehicle: "#f59e0b",
-} as const;
+// Marker colors live in ./markers (importable from server components).

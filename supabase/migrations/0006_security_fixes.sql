@@ -127,6 +127,10 @@ create or replace view public_profiles as
          profile_image, is_driver, created_at
     from users
    where status <> 'deleted';
+-- Read-only: a single-table view is auto-updatable and runs with the owner's
+-- rights (bypassing RLS), so default "grant all" privileges would let anyone
+-- rename other users or swap their photos through it.
+revoke all on public_profiles from public, anon, authenticated;
 grant select on public_profiles to anon, authenticated;
 
 -- ---------- TRIPS: passengers keep access to trips they booked ----------

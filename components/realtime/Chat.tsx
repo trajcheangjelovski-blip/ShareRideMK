@@ -107,7 +107,7 @@ export function Chat({
   }
 
   return (
-    <div id="chat" className="flex flex-col overflow-hidden rounded-2xl border bg-white">
+    <div id="chat" className="flex flex-col overflow-hidden card">
       <div className="border-b px-4 py-2.5 text-sm font-semibold">Разговор со {otherName}</div>
       <div ref={list} className="h-72 space-y-2 overflow-y-auto bg-slate-50 p-3">
         {messages.length === 0 && (

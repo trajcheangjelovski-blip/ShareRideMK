@@ -53,16 +53,7 @@ insert into admin_settings (setting_key, setting_value) values
 on conflict (setting_key) do nothing;
 
 -- ---------- POPULAR ROUTES (for featured / SEO) ----------
--- Stored as a lightweight reference table (not in core schema).
-create table if not exists popular_routes (
-  id            uuid primary key default uuid_generate_v4(),
-  start_city_id uuid not null references cities(id),
-  end_city_id   uuid not null references cities(id),
-  is_featured   boolean not null default false,
-  sort_order    integer not null default 0,
-  unique (start_city_id, end_city_id)
-);
-
+-- Table is created in migration 0008_popular_routes.sql.
 insert into popular_routes (start_city_id, end_city_id, is_featured, sort_order)
 select s.id, e.id, true, r.ord
 from (values

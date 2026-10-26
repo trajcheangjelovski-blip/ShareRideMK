@@ -27,7 +27,7 @@ export default async function DriverOverview() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Возач — Преглед</h1>
+        <h1 className="page-title">Возач — Преглед</h1>
         <Link href="/dashboard/driver/create-trip" className="btn-primary !px-4 !py-2 text-sm">
           Креирај патување
         </Link>

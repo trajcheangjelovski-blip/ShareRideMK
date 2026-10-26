@@ -116,10 +116,10 @@ export function LocationPicker({
             }
           }}
           placeholder="Пребарај адреса или кликни на мапата"
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="input outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
         {results.length > 0 && (
-          <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border bg-white shadow-lift">
+          <ul className="absolute z-20 mt-1 w-full overflow-hidden card shadow-lift">
             {results.map((r, i) => (
               <li key={i}>
                 <button type="button" onClick={() => pick(r, r.label)}

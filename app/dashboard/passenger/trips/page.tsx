@@ -17,17 +17,17 @@ export default async function MyTripsPage({ searchParams }: { searchParams: { se
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-2xl font-semibold">Мои патувања</h1>
+      <h1 className="page-title">Мои патувања</h1>
       {searchParams.sent && (
-        <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+        <p className="mt-3 alert-success">
           Барањето е испратено. Чекаш одобрување од возачот.
         </p>
       )}
       {searchParams.error && (
-        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>
+        <p className="mt-3 alert-error">{searchParams.error}</p>
       )}
 
-      <div className="mt-6 divide-y rounded-xl border">
+      <div className="mt-6 card divide-y divide-slate-100 overflow-hidden">
         {(bookings ?? []).length === 0 && (
           <p className="p-4 text-sm text-slate-500">
             Сè уште немаш патувања.{" "}

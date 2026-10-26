@@ -26,7 +26,7 @@ export default async function DriverTripsPage() {
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Мои објави</h1>
+        <h1 className="page-title">Мои објави</h1>
         <Link href="/dashboard/driver/create-trip" className="btn-primary !px-4 !py-2 text-sm">Креирај патување</Link>
       </div>
 
@@ -39,8 +39,8 @@ export default async function DriverTripsPage() {
 function TripList({ title, trips, empty }: { title: string; trips: any[]; empty: string }) {
   return (
     <section className="mt-8">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{title}</h2>
-      <div className="mt-2 divide-y rounded-xl border bg-white">
+      <h2 className="section-label">{title}</h2>
+      <div className="mt-2 card divide-y divide-slate-100 overflow-hidden">
         {trips.length === 0 && <p className="p-4 text-sm text-slate-500">{empty}</p>}
         {trips.map((t) => {
           const pending = (t.bookings ?? []).filter((b: any) => b.status === "pending").length;

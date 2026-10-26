@@ -36,6 +36,8 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase (PostgreSQL + Auth + 
    - `supabase/migrations/0005_user_status.sql` (пушти го **сам**, види коментар во фајлот)
    - `supabase/migrations/0006_security_fixes.sql` — **задолжително**: затвора RLS дупки (само-унапредување во admin, само-одобрување барања, лажни оценки/промоции)
    - `supabase/migrations/0007_trip_lifecycle_notifications_realtime.sql` — тек на патување, известувања, Realtime
+   - `supabase/migrations/0008_popular_routes.sql` — табела за популарни рути со RLS (порано во seed, без заштита)
+   - `supabase/migrations/0009_api_grants.sql` — експлицитни дозволи за API; без ова, нов Supabase проект не може да ги чита табелите
    - `supabase/seed.sql`
 3. Од **Project Settings → API** земи ги: `URL`, `anon key`, `service_role key`.
 
@@ -60,6 +62,15 @@ npm install
 npm run dev
 # отвори http://localhost:3000
 ```
+
+### Локален развој без продукциската база (препорачано)
+Бара Docker Desktop и [Supabase CLI](https://supabase.com/docs/guides/cli). Сите миграции и `seed.sql` се извршуваат автоматски.
+```bash
+supabase start -x edge-runtime,imgproxy,vector,logflare,supavisor
+supabase status -o env          # копирај API_URL, ANON_KEY и SERVICE_ROLE_KEY во .env.local
+node scripts/seed-demo.mjs      # демо профили, возило, патувања и едно барање
+```
+Демо профилите (само локално) се наведени на врвот на `scripts/seed-demo.mjs`. Скриптата одбива да работи врз база што не е локална. Supabase Studio: http://127.0.0.1:54323.
 
 ### 4. Брз тест на текот
 Потребни се два профила (возач и патник), двата одобрени од админ.

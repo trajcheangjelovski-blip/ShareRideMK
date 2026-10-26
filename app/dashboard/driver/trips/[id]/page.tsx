@@ -6,7 +6,8 @@ import { formatDate, formatTime, fullName } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Avatar } from "@/components/Avatar";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { MapView, MARKER } from "@/components/map";
+import { MapView } from "@/components/map";
+import { MARKER } from "@/components/map/markers";
 import { Chat } from "@/components/realtime/Chat";
 import { DriverBroadcaster } from "@/components/realtime/DriverBroadcaster";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
@@ -69,7 +70,7 @@ export default async function DriverTripPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold">{t.start_city?.name} → {t.end_city?.name}</h1>
+            <h1 className="page-title">{t.start_city?.name} → {t.end_city?.name}</h1>
             <StatusBadge status={t.status} />
           </div>
           <p className="mt-1 text-slate-500">
@@ -80,11 +81,11 @@ export default async function DriverTripPage({
       </div>
 
       {searchParams.created && (
-        <p className="rounded-xl bg-green-50 p-3 text-sm text-green-700">
+        <p className="alert-success">
           Патувањето е објавено. Патниците веќе можат да го најдат и да испратат барање.
         </p>
       )}
-      {searchParams.error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>}
+      {searchParams.error && <p className="alert-error">{searchParams.error}</p>}
 
       {live && <DriverBroadcaster tripId={t.id} driverId={user!.id} />}
 
@@ -118,7 +119,7 @@ export default async function DriverTripPage({
               const p = personById.get(b.passenger_id);
               const selected = chatBooking?.id === b.id;
               return (
-                <div key={b.id} className={`rounded-xl border bg-white p-4 text-sm ${selected ? "ring-2 ring-brand/40" : ""}`}>
+                <div key={b.id} className={`card p-4 text-sm ${selected ? "ring-2 ring-brand/40" : ""}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="flex items-center gap-2 font-medium">

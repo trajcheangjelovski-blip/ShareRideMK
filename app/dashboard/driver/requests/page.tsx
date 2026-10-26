@@ -49,12 +49,12 @@ export default async function RequestsPage({ searchParams }: { searchParams: { e
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-2xl font-semibold">Барања од патници</h1>
+      <h1 className="page-title">Барања од патници</h1>
       {searchParams.error && (
-        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>
+        <p className="mt-3 alert-error">{searchParams.error}</p>
       )}
 
-      <h2 className="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">Во чекање ({pending.length})</h2>
+      <h2 className="mt-6 section-label">Во чекање ({pending.length})</h2>
       <div className="mt-2 space-y-3">
         {pending.length === 0 && <p className="text-sm text-slate-500">Нема нови барања.</p>}
         {pending.map((r) => <RequestCard key={r.id} r={r} passenger={byId.get(r.passenger_id)} />)}
@@ -62,7 +62,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: { e
 
       {others.length > 0 && (
         <>
-          <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-400">Претходни</h2>
+          <h2 className="mt-8 section-label">Претходни</h2>
           <div className="mt-2 space-y-3">
             {others.map((r) => <RequestCard key={r.id} r={r} passenger={byId.get(r.passenger_id)} />)}
           </div>
@@ -74,7 +74,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: { e
 
 function RequestCard({ r, passenger }: { r: any; passenger?: any }) {
   return (
-    <div className="rounded-xl border bg-white p-4">
+    <div className="card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-medium">

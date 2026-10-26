@@ -101,7 +101,7 @@ export default async function CreateTripPage({ searchParams }: { searchParams: {
   if (!me?.is_driver) {
     return (
       <div className="max-w-xl">
-        <h1 className="text-2xl font-semibold">Креирај патување</h1>
+        <h1 className="page-title">Креирај патување</h1>
         <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
           Твојот профил е регистриран само како патник. За да нудиш превоз, контактирај го тимот за да се додаде улога возач.
         </p>
@@ -113,12 +113,12 @@ export default async function CreateTripPage({ searchParams }: { searchParams: {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-semibold">Креирај патување</h1>
+      <h1 className="page-title">Креирај патување</h1>
       {searchParams.error && (
-        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>
+        <p className="mt-3 alert-error">{searchParams.error}</p>
       )}
       {noVehicles && (
-        <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+        <p className="mt-3 alert-warn">
           Прво <Link href="/dashboard/driver/vehicles" className="font-medium underline">додај возило</Link>.
         </p>
       )}
@@ -172,7 +172,7 @@ export default async function CreateTripPage({ searchParams }: { searchParams: {
   );
 }
 
-const inputCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5";
+const inputCls = "input";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
