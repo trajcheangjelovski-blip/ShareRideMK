@@ -7,4 +7,5 @@ export const MARKER = {
   pickup: "#16a34a",
   dropoff: "#dc2626",
   vehicle: "#f59e0b",
+  passenger: "#2563eb", // live passenger position ("Ти" / passenger on the driver's map)
 } as const;

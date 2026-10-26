@@ -88,7 +88,8 @@ export default async function TripDetailPage({
       {searchParams.error && <p className="alert-error">{searchParams.error}</p>}
 
       {live ? (
-        <LiveTracking tripId={t.id} routePolyline={t.route_polyline} start={start} dest={dest}
+        <LiveTracking tripId={t.id} bookingId={booking!.id} passengerId={user!.id}
+          routePolyline={t.route_polyline} start={start} dest={dest}
           pickup={pickup} dropoff={dropoff} initial={lastLoc} />
       ) : (
         <MapView

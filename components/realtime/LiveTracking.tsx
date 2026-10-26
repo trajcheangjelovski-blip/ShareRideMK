@@ -7,6 +7,7 @@ import { MARKER } from "@/components/map/markers";
 import { decodePolyline } from "@/lib/geo/polyline";
 import { haversineKm, type LatLng } from "@/lib/geo/detour";
 import { getDrivingRoute } from "@/lib/geo/routing";
+import { useSharedPosition } from "@/lib/geo/useSharedPosition";
 
 type Loc = { latitude: number; longitude: number; recorded_at: string };
 
@@ -15,9 +16,12 @@ const AT_PICKUP_KM = 0.3;
 const STALE_MS = 2 * 60_000;
 
 // Live vehicle position for an in-progress trip (Realtime on trip_locations).
-// Shows ETA to the passenger's pickup, then to their drop-off.
+// Shows ETA to the passenger's pickup, then to their drop-off. The passenger
+// can opt in to share their own position with the driver (passenger_locations).
 export function LiveTracking({
   tripId,
+  bookingId,
+  passengerId,
   routePolyline,
   start,
   dest,
@@ -26,6 +30,8 @@ export function LiveTracking({
   initial,
 }: {
   tripId: string;
+  bookingId: string;
+  passengerId: string;
   routePolyline: string | null;
   start: LatLng;
   dest: LatLng;
@@ -35,6 +41,38 @@ export function LiveTracking({
 }) {
   const supabase = createClient();
   const [loc, setLoc] = useState<Loc | null>(initial ?? null);
+  const shareKey = `share-location:${bookingId}`;
+  const [sharing, setSharing] = useState(false);
+
+  // Remember the passenger's choice across reloads (per booking).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(shareKey) === "1") setSharing(true);
+    } catch { /* storage unavailable */ }
+  }, [shareKey]);
+
+  const me = useSharedPosition({
+    enabled: sharing,
+    send: async (p) => {
+      const { error } = await supabase.from("passenger_locations").upsert(
+        { booking_id: bookingId, trip_id: tripId, passenger_id: passengerId, latitude: p.lat, longitude: p.lng, accuracy: p.accuracy, is_sharing: true },
+        { onConflict: "booking_id" },
+      );
+      return error ? { ok: false, message: "Локацијата не е споделена со возачот." } : { ok: true };
+    },
+  });
+
+  async function toggleSharing() {
+    const next = !sharing;
+    setSharing(next);
+    try { localStorage.setItem(shareKey, next ? "1" : "0"); } catch { /* storage unavailable */ }
+    if (!next) {
+      // Wipe the stored position so the driver no longer has it.
+      await supabase.from("passenger_locations")
+        .update({ is_sharing: false, latitude: null, longitude: null, accuracy: null })
+        .eq("booking_id", bookingId);
+    }
+  }
   const [eta, setEta] = useState<{ pickup?: number; dropoff?: number } | null>(null);
   const [passedPickup, setPassedPickup] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -95,6 +133,7 @@ export function LiveTracking({
     ...(pickup ? [{ pos: pickup, color: MARKER.pickup, label: "Твое качување" }] : []),
     ...(dropoff ? [{ pos: dropoff, color: MARKER.dropoff, label: "Твое слегување" }] : []),
     ...(vehicle ? [{ pos: vehicle, color: MARKER.vehicle, label: "Возилото", pulse: !stale }] : []),
+    ...(sharing && me.position ? [{ pos: me.position, color: MARKER.passenger, label: "Ти" }] : []),
   ];
 
   return (
@@ -125,6 +164,23 @@ export function LiveTracking({
           </div>
         </div>
       )}
+      <div className="flex flex-col gap-3 border-t bg-slate-50/70 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 font-semibold text-ink">
+            <span className="inline-block h-3 w-3 rounded-full" style={{ background: sharing ? MARKER.passenger : "#cbd5e1" }} />
+            {sharing ? "Ја споделуваш твојата локација" : "Твојата локација не е споделена"}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {sharing
+              ? me.error ?? (me.lastSent ? "Возачот те гледа на мапата. Држи ја страницата отворена." : "Се чека GPS сигнал…")
+              : "Сподели ја за возачот полесно да те најде. Ја гледа само возачот, само додека трае патувањето."}
+          </p>
+        </div>
+        <button type="button" onClick={toggleSharing}
+          className={sharing ? "btn-secondary shrink-0" : "btn-primary shrink-0 !px-4 !py-2 text-sm"}>
+          {sharing ? "Престани да споделуваш" : "Сподели ја мојата локација"}
+        </button>
+      </div>
     </div>
   );
 }

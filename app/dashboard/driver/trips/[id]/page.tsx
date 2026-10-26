@@ -10,6 +10,7 @@ import { MapView } from "@/components/map";
 import { MARKER } from "@/components/map/markers";
 import { Chat } from "@/components/realtime/Chat";
 import { DriverBroadcaster } from "@/components/realtime/DriverBroadcaster";
+import { DriverLiveMap } from "@/components/realtime/DriverLiveMap";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
 
 const LIVE = ["driver_on_the_way", "arrived_at_pickup", "passenger_picked_up", "in_progress"];
@@ -89,6 +90,20 @@ export default async function DriverTripPage({
 
       {live && <DriverBroadcaster tripId={t.id} driverId={user!.id} />}
 
+      {live ? (
+        <DriverLiveMap
+          tripId={t.id}
+          routePolyline={t.route_polyline}
+          start={start}
+          dest={dest}
+          passengers={bookings.filter((b) => b.status === "approved").map((b) => ({
+            bookingId: b.id,
+            name: fullName(personById.get(b.passenger_id)),
+            pickup: { lat: b.pickup_latitude, lng: b.pickup_longitude },
+            dropoff: { lat: b.dropoff_latitude, lng: b.dropoff_longitude },
+          }))}
+        />
+      ) : (
       <MapView
         polyline={t.route_polyline}
         route={t.route_polyline ? undefined : [start, dest]}
@@ -105,6 +120,7 @@ export default async function DriverTripPage({
           }),
         ]}
       />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <section>
