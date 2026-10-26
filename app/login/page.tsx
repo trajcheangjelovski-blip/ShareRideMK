@@ -2,14 +2,23 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+// Only same-site paths are allowed as a post-login target (no open redirect).
+function safeNext(value: unknown): string {
+  const s = typeof value === "string" ? value : "";
+  return s.startsWith("/") && !s.startsWith("//") && !s.startsWith("/\\") ? s : "/dashboard/passenger";
+}
+
 async function login(formData: FormData) {
   "use server";
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
+  const next = safeNext(formData.get("next"));
   const supabase = createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/login?error=${encodeURIComponent(
+      error.message === "Invalid login credentials" ? "Погрешен email или лозинка." : error.message
+    )}&redirect=${encodeURIComponent(next)}`);
   }
 
   // Целосно блокирани / избришани профили не смеат да останат логирани.
@@ -23,13 +32,13 @@ async function login(formData: FormData) {
     redirect("/login?blocked=1");
   }
 
-  redirect("/dashboard/passenger");
+  redirect(next);
 }
 
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; blocked?: string };
+  searchParams: { error?: string; blocked?: string; redirect?: string };
 }) {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
@@ -55,6 +64,7 @@ export default function LoginPage({
           </p>
         )}
         <form action={login} className="flex flex-col gap-4">
+          <input type="hidden" name="next" value={safeNext(searchParams.redirect)} />
           <input name="email" type="email" placeholder="Email" required
             className="rounded-xl border border-slate-200 bg-white/80 px-4 py-3 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30" />
           <input name="password" type="password" placeholder="Лозинка" required

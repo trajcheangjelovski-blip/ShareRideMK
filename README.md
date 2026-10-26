@@ -7,15 +7,20 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase (PostgreSQL + Auth + 
 
 ---
 
-## Што е веќе изградено (MVP core slice)
+## Што е изградено
 
 - **База:** целосна schema, тригери и RLS политики во `supabase/migrations/`, seed во `supabase/seed.sql`.
-- **Auth:** регистрација/најава (Supabase Auth), огледало во `public.users`, middleware заштита на `/dashboard` и `/admin`.
-- **Патник:** преглед, „Најди превоз" (search по рута/датум), детали за патување, **Request to Join** со автоматска detour пресметка, „Мои патувања".
-- **Возач:** преглед, додавање возило, креирање патување, барања со **Accept/Reject** (местата се намалуваат автоматски преку DB тригер).
-- **Логика:** detour/route-matching (`lib/geo/detour.ts`), search ranking (`lib/ranking/search-ranking.ts`), Zod валидација (`lib/validations/schemas.ts`).
+- **Auth:** регистрација/најава (Supabase Auth), огледало во `public.users`, middleware заштита на `/dashboard` и `/admin`, враќање на страницата од која дошол корисникот по најава.
+- **Јавно пребарување:** `/find-ride` — посетителите прелистуваат превози без профил; се прикажуваат само идни патувања.
+- **Мапи:** избор на локација (пребарување адреса, „Моја локација", клик на мапа) за поаѓање/дестинација и качување/слегување; вистинска патна рута (OSRM) се зачувува со патувањето и се користи за пресметка на скршнување.
+- **Патник:** преглед, барање со мапа и проценка на скршнување во живо, откажување, разговор со возачот, **следење во живо** со ETA, оценка на возачот.
+- **Возач:** „Мои објави", управување со патување (започни / заврши / откажи), прифаќање/одбивање патници, споделување GPS локација во живо, разговор по барање, оценка на патниците.
+- **Известувања:** ѕвонче во реално време (ново барање, прифатено/одбиено, нова порака, патувањето тргна/заврши, нова оценка). Ги креираат DB тригери.
+- **Оценки:** по завршено патување, двете страни се оценуваат; рејтингот на возачот се пресметува автоматски.
+- **Admin UI:** корисници (модерација), патувања, барања, пријави.
+- **Логика:** detour/route-matching (`lib/geo/detour.ts`), рути (`lib/geo/routing.ts`), search ranking (`lib/ranking/search-ranking.ts`), Zod валидација (`lib/validations/schemas.ts`).
 
-> Сè уште НЕ е изградено (следни чекори): live tracking, chat, reviews, notifications, admin UI, промоции/претплати, мапи (Mapbox). Pickup/dropoff моментално се внесуваат како координати — следно се заменува со избор на мапа.
+> Сè уште НЕ е изградено: промоции/претплати (плаќање), пријави од корисници (табелата постои), повторувачки патувања, попатни станици (waypoints).
 
 ---
 
@@ -27,6 +32,10 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase (PostgreSQL + Auth + 
    - `supabase/migrations/0001_schema.sql`
    - `supabase/migrations/0002_functions_triggers.sql`
    - `supabase/migrations/0003_rls.sql`
+   - `supabase/migrations/0004_storage.sql`
+   - `supabase/migrations/0005_user_status.sql` (пушти го **сам**, види коментар во фајлот)
+   - `supabase/migrations/0006_security_fixes.sql` — **задолжително**: затвора RLS дупки (само-унапредување во admin, само-одобрување барања, лажни оценки/промоции)
+   - `supabase/migrations/0007_trip_lifecycle_notifications_realtime.sql` — тек на патување, известувања, Realtime
    - `supabase/seed.sql`
 3. Од **Project Settings → API** земи ги: `URL`, `anon key`, `service_role key`.
 
@@ -38,9 +47,12 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase (PostgreSQL + Auth + 
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
-NEXT_PUBLIC_MAPBOX_TOKEN=...   # за мапи (следна фаза)
+NEXT_PUBLIC_MAPBOX_TOKEN=...   # опционално: Mapbox плочки наместо OpenStreetMap
+NEXT_PUBLIC_OSRM_URL=...       # опционално: сопствен OSRM сервер за рути
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
+
+**Мапи без клуч:** стандардно се користат OpenStreetMap плочки, Nominatim (пребарување адреси) и јавниот OSRM демо сервер (рути) — работи веднаш, без API клуч. За продукција со поголем сообраќај: постави `NEXT_PUBLIC_MAPBOX_TOKEN` (плочки) и `NEXT_PUBLIC_OSRM_URL` (сопствен OSRM), бидејќи јавните сервиси имаат ограничувања за употреба. Следењето во живо бара HTTPS (или localhost) за GPS во прелистувачот.
 
 ### 3. Стартување
 ```bash
@@ -50,45 +62,52 @@ npm run dev
 ```
 
 ### 4. Брз тест на текот
-1. Регистрирај се како **И патник и возач**.
-2. Возач → Возила → додај возило.
-3. Возач → Креирај патување (пр. Скопје → Велес, со координати: старт 41.99/21.42, дест 41.71/21.77).
-4. Патник → Најди превоз → избери Скопје/Велес → отвори го патувањето → Request to Join.
-5. Возач → Барања → Прифати. Местата се намалуваат автоматски.
+Потребни се два профила (возач и патник), двата одобрени од админ.
+1. Возач → Возила → додај возило.
+2. Возач → Креирај патување → избери Скопје → Велес (пиновите паѓаат во центарот на градот, рутата се пресметува).
+3. Патник → Најди превоз → отвори го патувањето → избери качување/слегување на мапата → Испрати барање. Возачот добива известување.
+4. Возач → Мои објави → патувањето → Прифати. Местата се намалуваат; патникот добива известување. Пишете си во разговорот.
+5. Возач → Започни патување (дозволи локација). Патникот го гледа возилото во живо со ETA.
+6. Возач → Заврши патување. Двете страни можат да се оценат.
 
 ---
 
 ## Структура
 
 ```
-app/                 страници (App Router) + server actions + route handlers
-  page.tsx           landing
-  login/ register/   auth
-  auth/signout/      signout route
+app/                   страници (App Router)
+  page.tsx             landing
+  find-ride/           јавно пребарување · offer-ride/ → креирај патување
+  login/ register/     auth
   dashboard/
-    passenger/       overview, find, trips, trips/[id]
-    driver/          overview, create-trip, requests, vehicles
+    passenger/         overview, find, trips, trips/[id] (барање, разговор, следење, оценка), profile
+    driver/            overview, trips, trips/[id] (управување), create-trip, requests, vehicles
+  admin/               модерација
+components/
+  map/                 MapView (Leaflet), LocationPicker, TripRouteFields, BookingFields
+  realtime/            NotificationBell, Chat, LiveTracking, DriverBroadcaster
+  reviews/             ReviewForm, ReviewList
 lib/
-  supabase/          client.ts, server.ts, middleware.ts
-  geo/detour.ts      detour & route-matching
-  ranking/           search ranking (section 21)
-  validations/       Zod schemas
-middleware.ts        session refresh + route guards
+  actions/             server actions: bookings, trips, reviews
+  supabase/            client.ts, server.ts, middleware.ts
+  geo/                 detour, polyline, routing (OSRM), geocode (Nominatim)
+  ranking/             search ranking (section 21)
+  validations/         Zod schemas
+middleware.ts          session refresh + route guards
 supabase/
-  migrations/        0001 schema · 0002 triggers · 0003 RLS
-  seed.sql           cities, plans, settings, popular routes
+  migrations/          0001 schema · 0002 triggers · 0003 RLS · 0004 storage · 0005 status
+                       0006 security fixes · 0007 lifecycle, notifications, realtime
+  seed.sql             cities, plans, settings, popular routes
 ```
 
 ---
 
-## Препорачани следни чекори (по приоритет)
+## Препорачани следни чекори
 
-1. **Мапи (Mapbox):** замени ги координатните полиња со `LocationPicker` (search + GPS + клик на мапа) и прикажи рута во деталите.
-2. **Live tracking:** Supabase Realtime канал `trip:{id}:location`, driver `watchPosition`, passenger `LiveTrackingMap` + ETA.
-3. **Chat:** Realtime на `messages` по `booking_id`.
-4. **Notifications:** запис во `notifications` на секоја акција + bell.
-5. **Reviews + Reports.**
-6. **Admin UI** над постоечките табели.
-7. **Промоции/претплати** (`trip_promotions`, `driver_subscriptions`) + cron за истекување.
+1. **Next.js 15/16:** 14.2.35 го поправа заобиколувањето на middleware, но дел од безбедносните поправки на Next постојат само во 15+.
+2. **Промоции/претплати** (`trip_promotions`, `driver_subscriptions`) со плаќање на серверот + cron за истекување. Директно запишување од возачите е намерно оневозможено (0006).
+3. **Пријави од корисници** (табелата `reports` и admin екранот веќе постојат).
+4. **Повторно барање** по откажување (сега `unique (trip_id, passenger_id)` дозволува едно барање по патување).
+5. **Попатни станици и повторувачки патувања** (`trip_waypoints`, `recurrence`).
 
-Детали за секоја од овие во `Macedonia-Ride-Blueprint.md`, секции 11–23 и планот по фази (секции 28–30).
+Детали во `Macedonia-Ride-Blueprint.md`, секции 11–23 и планот по фази (секции 28–30).

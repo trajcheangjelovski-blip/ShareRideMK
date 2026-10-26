@@ -1,11 +1,26 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { SiteHeader } from "@/components/SiteHeader";
+import { todayISO } from "@/lib/format";
 
 // Typed helper for the staggered-reveal CSS custom property.
 const rv = (ms: string): React.CSSProperties => ({ "--d": ms } as React.CSSProperties);
 
-export default function HomePage() {
+const fieldCls =
+  "flex-1 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30";
+
+export default async function HomePage() {
+  const supabase = createClient();
+  const today = todayISO();
+  const [{ data: cities }, { count: upcomingTrips }, { count: drivers }] = await Promise.all([
+    supabase.from("cities").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("trips").select("id", { count: "exact", head: true })
+      .eq("status", "published").gte("departure_date", today),
+    supabase.from("driver_profiles").select("id", { count: "exact", head: true }),
+  ]);
+
   return (
-    <main className="relative overflow-hidden">
+    <main className="relative overflow-x-clip">
       {/* Decorative animated background blobs */}
       <div aria-hidden className="absolute inset-0 -z-10">
         <div className="blob -left-24 -top-24 h-96 w-96 animate-blob bg-brand-light/50" />
@@ -14,20 +29,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-hero-radial" />
       </div>
 
-      {/* Sticky glass header */}
-      <header className="sticky top-0 z-30">
-        <div className="glass mx-auto mt-4 flex max-w-6xl items-center justify-between rounded-2xl px-5 py-3 shadow-soft">
-          <span className="text-lg font-bold tracking-tight text-gradient">Macedonia Ride</span>
-          <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 sm:flex">
-            <Link href="/find-ride" className="transition-colors hover:text-brand-dark">Најди превоз</Link>
-            <Link href="/offer-ride" className="transition-colors hover:text-brand-dark">Понуди превоз</Link>
-            <Link href="/login" className="transition-colors hover:text-brand-dark">Најава</Link>
-          </nav>
-          <Link href="/register" className="btn-primary !px-4 !py-2 text-sm">
-            Регистрација
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
 
       {/* Hero */}
       <section className="mx-auto max-w-4xl px-6 pb-12 pt-20 text-center sm:pt-28">
@@ -53,19 +55,22 @@ export default function HomePage() {
           className="reveal glass mx-auto mt-10 flex max-w-2xl flex-col gap-3 rounded-2xl p-4 shadow-lift sm:flex-row sm:items-center"
           style={rv("240ms")}
         >
-          <input name="from" placeholder="Од (пр. Скопје)"
-            className="flex-1 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30" />
-          <input name="to" placeholder="До (пр. Велес)"
-            className="flex-1 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30" />
-          <input name="date" type="date"
-            className="rounded-xl border border-slate-200 bg-white/80 px-4 py-3 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30" />
+          <select name="from" aria-label="Од" defaultValue="" className={fieldCls}>
+            <option value="">Од (сите градови)</option>
+            {cities?.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+          </select>
+          <select name="to" aria-label="До" defaultValue="" className={fieldCls}>
+            <option value="">До (сите градови)</option>
+            {cities?.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+          </select>
+          <input name="date" type="date" min={today} aria-label="Датум" className={fieldCls} />
           <button className="btn-primary">Барај</button>
         </form>
 
         <div className="reveal mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-slate-500" style={rv("320ms")}>
-          <Stat value="22" label="градови" />
-          <Stat value="40+" label="популарни рути" />
-          <Stat value="★ 4.8" label="доверба" />
+          <Stat value={String(cities?.length ?? 0)} label="градови" />
+          <Stat value={String(upcomingTrips ?? 0)} label="претстојни патувања" />
+          <Stat value={String(drivers ?? 0)} label="возачи" />
         </div>
       </section>
 
@@ -94,7 +99,7 @@ export default function HomePage() {
           <p className="mx-auto mt-2 max-w-xl text-white/85">
             Објави го патувањето, подели ги трошоците и патувај со друштво.
           </p>
-          <Link href="/register" className="mt-6 inline-flex rounded-xl bg-white px-6 py-3 font-semibold text-brand-dark shadow-lift transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
+          <Link href="/offer-ride" className="mt-6 inline-flex rounded-xl bg-white px-6 py-3 font-semibold text-brand-dark shadow-lift transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
             Понуди превоз
           </Link>
         </div>

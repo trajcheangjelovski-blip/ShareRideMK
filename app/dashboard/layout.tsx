@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { NavLink } from "@/components/NavLink";
+import { NotificationBell } from "@/components/realtime/NotificationBell";
 
 export default async function DashboardLayout({
   children,
@@ -30,30 +32,70 @@ export default async function DashboardLayout({
   // needs_verification → пристапот е дозволен, но акциите се ограничени (банер долу).
   const needsVerification = status === "needs_verification";
 
+  const passengerLinks = [
+    { href: "/dashboard/passenger", label: "Преглед", exact: true },
+    { href: "/dashboard/passenger/find", label: "Најди превоз" },
+    { href: "/dashboard/passenger/trips", label: "Мои патувања" },
+    { href: "/dashboard/passenger/profile", label: "Мој профил" },
+  ];
+  const driverLinks = profile?.is_driver
+    ? [
+        { href: "/dashboard/driver", label: "Преглед", exact: true },
+        { href: "/dashboard/driver/trips", label: "Мои објави" },
+        { href: "/dashboard/driver/create-trip", label: "Креирај патување" },
+        { href: "/dashboard/driver/requests", label: "Барања" },
+        { href: "/dashboard/driver/vehicles", label: "Возила" },
+      ]
+    : [];
+
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col sm:flex-row">
+      {/* Mobile: top bar + scrollable link row */}
+      <div className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/90 backdrop-blur sm:hidden">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link href="/" className="text-lg font-bold text-brand">Macedonia Ride</Link>
+          <div className="flex items-center gap-2">
+            <NotificationBell userId={user.id} align="right" />
+            <form action="/auth/signout" method="post">
+              <button className="text-xs text-slate-500 hover:text-red-600">Одјави се</button>
+            </form>
+          </div>
+        </div>
+        <nav className="flex gap-2 overflow-x-auto px-4 pb-3">
+          {passengerLinks.map((l) => (
+            <NavLink key={l.href} href={l.href} exact={l.exact} compact>{l.label}</NavLink>
+          ))}
+          {driverLinks.map((l) => (
+            <NavLink key={l.href} href={l.href} exact={l.exact} compact>
+              {l.exact ? "Возач" : l.label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+
       <aside className="hidden w-60 shrink-0 border-r border-slate-200/70 bg-gradient-to-b from-slate-50 to-white p-4 sm:block">
-        <Link href="/" className="block text-lg font-bold text-brand">
-          Macedonia Ride
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="block text-lg font-bold text-brand">
+            Macedonia Ride
+          </Link>
+          <NotificationBell userId={user.id} />
+        </div>
         <p className="mt-1 text-xs text-slate-500">
           Здраво, {profile?.first_name ?? "корисник"}
         </p>
 
         <nav className="mt-6 flex flex-col gap-1 text-sm">
           <SectionLabel>Патник</SectionLabel>
-          <NavLink href="/dashboard/passenger">Преглед</NavLink>
-          <NavLink href="/dashboard/passenger/find">Најди превоз</NavLink>
-          <NavLink href="/dashboard/passenger/trips">Мои патувања</NavLink>
-          <NavLink href="/dashboard/passenger/profile">Мој профил</NavLink>
+          {passengerLinks.map((l) => (
+            <NavLink key={l.href} href={l.href} exact={l.exact}>{l.label}</NavLink>
+          ))}
 
-          {profile?.is_driver && (
+          {driverLinks.length > 0 && (
             <>
               <SectionLabel>Возач</SectionLabel>
-              <NavLink href="/dashboard/driver">Преглед</NavLink>
-              <NavLink href="/dashboard/driver/create-trip">Креирај патување</NavLink>
-              <NavLink href="/dashboard/driver/requests">Барања</NavLink>
-              <NavLink href="/dashboard/driver/vehicles">Возила</NavLink>
+              {driverLinks.map((l) => (
+                <NavLink key={l.href} href={l.href} exact={l.exact}>{l.label}</NavLink>
+              ))}
             </>
           )}
         </nav>
@@ -65,7 +107,7 @@ export default async function DashboardLayout({
         </form>
       </aside>
 
-      <main className="flex-1 p-6">
+      <main className="min-w-0 flex-1 p-4 sm:p-6">
         {needsVerification && <VerifyBanner />}
         {children}
       </main>
@@ -90,13 +132,6 @@ function VerifyBanner() {
   );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link href={href} className="rounded-lg px-3 py-2 font-medium text-slate-600 transition-all duration-200 hover:translate-x-0.5 hover:bg-brand/10 hover:text-brand-dark">
-      {children}
-    </Link>
-  );
-}
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="mt-4 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{children}</p>;
 }

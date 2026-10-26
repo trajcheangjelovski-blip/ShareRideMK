@@ -2,10 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "**.supabase.co" },
-      { protocol: "https", hostname: "api.mapbox.com" },
-    ],
+    // The app renders plain <img> tags and never uses next/image. Keeping the
+    // optimizer off (and without remotePatterns) removes the image-optimization
+    // endpoint's remote attack surface on Next 14.
+    unoptimized: true,
   },
 };
 

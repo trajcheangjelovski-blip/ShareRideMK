@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { uploadAvatar } from "@/lib/storage/avatar";
+import { ReviewList } from "@/components/reviews/ReviewList";
 
 const PATH = "/dashboard/passenger/profile";
 
@@ -67,7 +68,7 @@ export default async function ProfilePage({
   } = await supabase.auth.getUser();
   const { data: me } = await supabase
     .from("users")
-    .select("first_name,last_name,email,phone,profile_image")
+    .select("first_name,last_name,email,phone,profile_image,is_driver")
     .eq("id", user!.id)
     .single();
 
@@ -120,6 +121,14 @@ export default async function ProfilePage({
         </div>
         <button className="btn-primary mt-4 !py-2.5">Смени лозинка</button>
       </form>
+
+      {/* Добиени оценки */}
+      <section className="reveal card-hover mt-6 space-y-6 p-6">
+        {me?.is_driver && (
+          <ReviewList userId={user!.id} type="passenger_to_driver" title="Оценки како возач" limit={10} />
+        )}
+        <ReviewList userId={user!.id} type="driver_to_passenger" title="Оценки како патник" limit={10} />
+      </section>
     </div>
   );
 }

@@ -1,142 +1,215 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { computeDetour, type LatLng } from "@/lib/geo/detour";
+import { requestToJoin, cancelBooking } from "@/lib/actions/bookings";
+import { submitReview } from "@/lib/actions/reviews";
+import { formatDate, formatTime, fullName } from "@/lib/format";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Avatar } from "@/components/Avatar";
+import { MapView, MARKER } from "@/components/map";
+import { BookingFields } from "@/components/map/BookingFields";
+import { Chat } from "@/components/realtime/Chat";
+import { LiveTracking } from "@/components/realtime/LiveTracking";
+import { ReviewForm } from "@/components/reviews/ReviewForm";
+import { ReviewList } from "@/components/reviews/ReviewList";
 
-// --- Server action: Request to Join ---
-async function requestToJoin(formData: FormData) {
-  "use server";
+const LIVE = ["driver_on_the_way", "arrived_at_pickup", "passenger_picked_up", "in_progress"];
+
+export default async function TripDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { sent?: string; error?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  // Само одобрени профили смеат да поднесуваат барања.
-  const { data: me } = await supabase.from("users").select("status").eq("id", user.id).single();
-  if (me?.status !== "active") {
-    redirect(`/dashboard/passenger/trips?error=${encodeURIComponent(
-      "Профилот е под дополнителна верификација — не можеш да поднесуваш барања додека не се верифицираш."
-    )}`);
-  }
-
-  const tripId = String(formData.get("trip_id"));
-  const seats = Number(formData.get("seats_requested"));
-  const pickupLat = Number(formData.get("pickup_latitude"));
-  const pickupLng = Number(formData.get("pickup_longitude"));
-  const dropoffLat = Number(formData.get("dropoff_latitude"));
-  const dropoffLng = Number(formData.get("dropoff_longitude"));
-  const message = String(formData.get("message") ?? "");
-
-  // Build a simple 2-point route (start→end) for the MVP detour estimate.
   const { data: trip } = await supabase
     .from("trips")
-    .select("start_latitude,start_longitude,destination_latitude,destination_longitude,max_detour_minutes")
-    .eq("id", tripId)
-    .single();
-
-  let detour = { distanceFromRouteKm: 0, detourMinutes: 0, withinLimit: true };
-  if (trip) {
-    const route: LatLng[] = [
-      { lat: trip.start_latitude, lng: trip.start_longitude },
-      { lat: trip.destination_latitude, lng: trip.destination_longitude },
-    ];
-    detour = computeDetour({ lat: pickupLat, lng: pickupLng }, route, trip.max_detour_minutes);
-  }
-
-  await supabase.from("bookings").insert({
-    trip_id: tripId,
-    passenger_id: user.id,
-    seats_requested: seats,
-    pickup_latitude: pickupLat,
-    pickup_longitude: pickupLng,
-    dropoff_latitude: dropoffLat,
-    dropoff_longitude: dropoffLng,
-    message,
-    detour_minutes_estimate: detour.detourMinutes,
-    distance_from_route_km: detour.distanceFromRouteKm,
-    is_within_driver_detour_limit: detour.withinLimit,
-    status: "pending",
-  });
-
-  redirect("/dashboard/passenger/trips?sent=1");
-}
-
-export default async function TripDetailPage({ params }: { params: { id: string } }) {
-  const supabase = createClient();
-  const { data: trip } = await supabase
-    .from("trips")
-    .select(
-      "*, start_city:start_city_id(name), end_city:end_city_id(name), " +
-        "vehicle:vehicle_id(make,model,color,has_ac)"
-    )
+    .select("*, start_city:start_city_id(name), end_city:end_city_id(name), vehicle:vehicle_id(make, model, color, has_ac)")
     .eq("id", params.id)
-    .single();
-
-  if (!trip) return <p>Патувањето не е пронајдено.</p>;
-
-  // driver_profiles is keyed by user_id; fetch it separately.
-  const { data: driver } = await supabase
-    .from("driver_profiles")
-    .select("rating_average,total_trips")
-    .eq("user_id", trip.driver_id)
     .maybeSingle();
+  const t: any = trip;
+  if (!t) {
+    return (
+      <div className="max-w-xl rounded-2xl border border-dashed p-8 text-center text-sm text-slate-500">
+        Патувањето не е пронајдено или повеќе не е достапно.{" "}
+        <Link href="/dashboard/passenger/find" className="font-medium text-brand-dark hover:underline">Најди друг превоз</Link>
+      </div>
+    );
+  }
+  if (t.driver_id === user!.id) redirect(`/dashboard/driver/trips/${t.id}`);
+
+  const [{ data: driver }, { data: driverStats }, { data: booking }] = await Promise.all([
+    supabase.from("public_profiles").select("id, first_name, last_initial, profile_image, created_at").eq("id", t.driver_id).maybeSingle(),
+    supabase.from("driver_profiles").select("rating_average, total_trips").eq("user_id", t.driver_id).maybeSingle(),
+    supabase.from("bookings").select("*").eq("trip_id", t.id).eq("passenger_id", user!.id).maybeSingle(),
+  ]);
+
+  const live = booking?.status === "approved" && LIVE.includes(t.status);
+  const [{ data: lastLoc }, { data: myReview }] = await Promise.all([
+    live
+      ? supabase.from("trip_locations").select("latitude, longitude, recorded_at").eq("trip_id", t.id)
+          .order("recorded_at", { ascending: false }).limit(1).maybeSingle()
+      : Promise.resolve({ data: null }),
+    booking?.status === "completed"
+      ? supabase.from("reviews").select("id").eq("booking_id", booking.id).eq("reviewer_id", user!.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const start = { lat: t.start_latitude, lng: t.start_longitude, label: t.start_address || t.start_city?.name };
+  const dest = { lat: t.destination_latitude, lng: t.destination_longitude, label: t.destination_address || t.end_city?.name };
+  const pickup = booking ? { lat: booking.pickup_latitude, lng: booking.pickup_longitude } : undefined;
+  const dropoff = booking ? { lat: booking.dropoff_latitude, lng: booking.dropoff_longitude } : undefined;
+  const driverName = fullName(driver);
+  const canBook = !booking && t.status === "published" && t.available_seats > 0;
+  const canChat = booking && ["pending", "approved", "completed"].includes(booking.status);
+  const canCancel = booking && ["pending", "approved"].includes(booking.status) && !LIVE.includes(t.status) && t.status !== "completed";
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold">
-        {trip.start_city?.name} → {trip.end_city?.name}
-      </h1>
-      <p className="mt-1 text-slate-500">
-        {trip.departure_date} · {trip.departure_time?.slice(0, 5)}
-      </p>
-
-      <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
-        <Info label="Цена по место" value={`${trip.price_per_seat} ден`} />
-        <Info label="Слободни места" value={trip.available_seats} />
-        <Info label="Возило" value={`${trip.vehicle?.make ?? ""} ${trip.vehicle?.model ?? ""} ${trip.vehicle?.has_ac ? "· клима" : ""}`} />
-        <Info label="Оцена на возач" value={`★ ${Number(driver?.rating_average ?? 0).toFixed(1)} (${driver?.total_trips ?? 0})`} />
-        <Info label="Багаж" value={trip.luggage_allowed ? "Дозволен" : "Не"} />
-        <Info label="Макс. скршнување" value={`${trip.max_detour_minutes} мин`} />
+    <div className="max-w-4xl space-y-6">
+      <div>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold">{t.start_city?.name} → {t.end_city?.name}</h1>
+          {t.status !== "published" && <StatusBadge status={t.status} />}
+        </div>
+        <p className="mt-1 text-slate-500">{formatDate(t.departure_date)} · {formatTime(t.departure_time)}</p>
       </div>
 
-      {trip.route_description && (
-        <div className="mt-4 rounded-xl border p-4 text-sm">
-          <p className="font-medium">Рута</p>
-          <p className="mt-1 text-slate-600">{trip.route_description}</p>
+      {searchParams.sent && (
+        <p className="rounded-xl bg-green-50 p-3 text-sm text-green-700">
+          Барањето е испратено. Ќе добиеш известување кога возачот ќе одговори — во меѓувреме можеш да му пишеш подолу.
+        </p>
+      )}
+      {searchParams.error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{searchParams.error}</p>}
+
+      {live ? (
+        <LiveTracking tripId={t.id} routePolyline={t.route_polyline} start={start} dest={dest}
+          pickup={pickup} dropoff={dropoff} initial={lastLoc} />
+      ) : (
+        <MapView
+          polyline={t.route_polyline}
+          route={t.route_polyline ? undefined : [start, dest]}
+          fitKey="trip"
+          markers={[
+            { pos: start, color: MARKER.start, label: `Поаѓање: ${start.label}` },
+            { pos: dest, color: MARKER.end, label: `Дестинација: ${dest.label}` },
+            ...(pickup ? [{ pos: pickup, color: MARKER.pickup, label: "Твое качување" }] : []),
+            ...(dropoff ? [{ pos: dropoff, color: MARKER.dropoff, label: "Твое слегување" }] : []),
+          ]}
+        />
+      )}
+
+      <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+        <Info label="Цена по место" value={`${Number(t.price_per_seat)} ден`} />
+        <Info label="Слободни места" value={t.available_seats} />
+        <Info label="Возило" value={t.vehicle ? `${t.vehicle.make} ${t.vehicle.model}${t.vehicle.color ? ` · ${t.vehicle.color}` : ""}` : "—"} />
+        <Info label="Поаѓање" value={start.label} />
+        <Info label="Дестинација" value={dest.label} />
+        <Info label="Правила" value={[
+          t.vehicle?.has_ac && "клима",
+          t.luggage_allowed ? "багаж ✓" : "без багаж",
+          t.smoking_allowed ? "пушење ✓" : "без пушење",
+          t.pets_allowed && "миленици ✓",
+        ].filter(Boolean).join(" · ")} />
+      </div>
+
+      {(t.route_description || t.notes) && (
+        <div className="space-y-2 rounded-2xl border p-4 text-sm">
+          {t.route_description && <p><span className="font-medium">Рута: </span><span className="text-slate-600">{t.route_description}</span></p>}
+          {t.notes && <p><span className="font-medium">Белешка од возачот: </span><span className="text-slate-600">{t.notes}</span></p>}
         </div>
       )}
 
-      {/* Request to Join */}
-      <form action={requestToJoin} className="mt-8 rounded-xl border p-4">
-        <input type="hidden" name="trip_id" value={trip.id} />
-        <h2 className="font-medium">Испрати барање</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Внеси pickup/dropoff координати (MVP — подоцна преку мапа).
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-          <input name="seats_requested" type="number" min={1} max={8} defaultValue={1}
-            placeholder="Места" className="rounded-lg border px-3 py-2" />
-          <div />
-          <input name="pickup_latitude" placeholder="Pickup lat" className="rounded-lg border px-3 py-2" />
-          <input name="pickup_longitude" placeholder="Pickup lng" className="rounded-lg border px-3 py-2" />
-          <input name="dropoff_latitude" placeholder="Dropoff lat" className="rounded-lg border px-3 py-2" />
-          <input name="dropoff_longitude" placeholder="Dropoff lng" className="rounded-lg border px-3 py-2" />
+      {/* Booking state */}
+      {booking && (
+        <div className="flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm">
+            <p className="flex items-center gap-2 font-semibold">Твое барање <StatusBadge status={booking.status} /></p>
+            <p className="mt-1 text-slate-500">
+              {booking.seats_requested} место(а) · {booking.pickup_address || "качување на мапата"} → {booking.dropoff_address || "слегување на мапата"}
+            </p>
+          </div>
+          {canCancel && (
+            <form action={cancelBooking}>
+              <input type="hidden" name="booking_id" value={booking.id} />
+              <input type="hidden" name="trip_id" value={t.id} />
+              <button className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                Откажи
+              </button>
+            </form>
+          )}
         </div>
-        <textarea name="message" placeholder="Порака до возачот"
-          className="mt-3 w-full rounded-lg border px-3 py-2 text-sm" rows={2} />
-        <button className="mt-3 rounded-lg bg-brand px-5 py-2 font-medium text-white hover:bg-brand-dark">
-          Request to Join
-        </button>
-      </form>
+      )}
+
+      {booking?.status === "completed" && !myReview && (
+        <ReviewForm action={submitReview} bookingId={booking.id} reviewType="passenger_to_driver" otherName={driverName} />
+      )}
+      {booking?.status === "completed" && myReview && (
+        <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">Ти благодариме — ја оцени возачот за ова патување.</p>
+      )}
+
+      {canChat && (
+        <Chat bookingId={booking.id} tripId={t.id} meId={user!.id} otherId={t.driver_id}
+          otherName={driver?.first_name ?? "возачот"} readOnly={booking.status === "completed"} />
+      )}
+
+      {canBook && (
+        <form action={requestToJoin} className="space-y-4 rounded-2xl border bg-white p-4 shadow-soft sm:p-5">
+          <input type="hidden" name="trip_id" value={t.id} />
+          <div>
+            <h2 className="font-semibold">Испрати барање за превоз</h2>
+            <p className="text-xs text-slate-500">Возачот го прифаќа или одбива барањето. Ќе добиеш известување.</p>
+          </div>
+          <BookingFields routePolyline={t.route_polyline} start={start} dest={dest} maxDetourMinutes={t.max_detour_minutes} />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <label className="text-sm sm:w-40">
+              <span className="mb-1 block text-slate-600">Места</span>
+              <select name="seats_requested" defaultValue={1} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                {Array.from({ length: Math.min(t.available_seats, 8) }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex-1 text-sm">
+              <span className="mb-1 block text-slate-600">Порака до возачот (опционално)</span>
+              <input name="message" maxLength={300} placeholder="Пр. Имам еден мал куфер."
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+            </label>
+          </div>
+          <button className="btn-primary">Испрати барање</button>
+        </form>
+      )}
+      {!booking && !canBook && (
+        <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Ова патување повеќе не прима барања.</p>
+      )}
+
+      {/* Driver */}
+      <section className="space-y-4 rounded-2xl border bg-white p-4 sm:p-5">
+        <div className="flex items-center gap-3">
+          <Avatar src={driver?.profile_image} size={48} />
+          <div>
+            <p className="font-semibold">{driverName}</p>
+            <p className="text-xs text-slate-500">
+              Возач · {driverStats?.total_trips ?? 0} завршени патувања
+              {driver?.created_at && ` · член од ${new Date(driver.created_at).getFullYear()}`}
+            </p>
+          </div>
+        </div>
+        <ReviewList userId={t.driver_id} type="passenger_to_driver" title="Оценки од патници" />
+      </section>
     </div>
   );
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-lg border p-3">
+    <div className="rounded-xl border bg-white p-3">
       <p className="text-xs text-slate-500">{label}</p>
-      <p className="font-medium">{value}</p>
+      <p className="mt-0.5 font-medium">{value}</p>
     </div>
   );
 }
