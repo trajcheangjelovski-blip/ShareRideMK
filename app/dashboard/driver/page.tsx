@@ -18,22 +18,32 @@ export default async function DriverOverview() {
     .eq("trips.driver_id", user!.id)
     .eq("status", "pending");
 
+  const { data: stats } = await supabase
+    .from("driver_profiles")
+    .select("rating_average, total_trips")
+    .eq("user_id", user!.id)
+    .maybeSingle();
+
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Возач — Преглед</h1>
+        <h1 className="page-title">Возач — Преглед</h1>
         <Link href="/dashboard/driver/create-trip" className="btn-primary !px-4 !py-2 text-sm">
           Креирај патување
         </Link>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <Kpi label="Мои патувања" value={trips?.length ?? 0} />
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Kpi label="Барања во чекање" value={pendingReqs?.length ?? 0} />
         <Kpi label="Објавени" value={trips?.filter((t) => t.status === "published").length ?? 0} />
+        <Kpi label="Завршени патувања" value={stats?.total_trips ?? 0} />
+        <Kpi label="Просечна оцена" value={Number(stats?.rating_average ?? 0) > 0 ? `★ ${Number(stats!.rating_average).toFixed(1)}` : "—"} />
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 flex gap-6">
+        <Link href="/dashboard/driver/trips" className="text-sm text-brand hover:underline">
+          Мои објави →
+        </Link>
         <Link href="/dashboard/driver/requests" className="text-sm text-brand hover:underline">
           Види ги барањата →
         </Link>
@@ -42,7 +52,7 @@ export default async function DriverOverview() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: number }) {
+function Kpi({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="reveal card-hover p-5">
       <p className="text-3xl font-extrabold text-gradient">{value}</p>

@@ -14,6 +14,8 @@ const config: Config = {
           light: "#5eead4",
         },
         promo: "#f59e0b", // акцент за промовирани патувања
+        ink: "#0b1f2a",   // наслови — длабоко сино-зелено, потопло од црна
+        canvas: "#f6f8f7", // позадина на dashboard и секции
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

@@ -4,7 +4,11 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #0f172a;
+  --foreground: #0b1f2a;
+}
+
+::selection {
+  background: rgba(14, 165, 164, 0.18);
 }
 
 html {
@@ -34,22 +38,86 @@ body {
 
   /* Primary button with sheen + lift */
   .btn-primary {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-xl
-           bg-brand-gradient px-6 py-3 font-medium text-white shadow-lift
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl
+           bg-brand-gradient px-6 py-3 font-semibold text-white shadow-lift
            transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow
-           active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-brand/50;
+           active:translate-y-0 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30
+           disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white
+           px-4 py-2.5 text-sm font-semibold text-slate-700 transition
+           hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/20;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-red-200 bg-white
+           px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50;
   }
 
+  /* Surfaces */
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft;
+  }
   /* Card that lifts on hover */
   .card-hover {
     @apply rounded-2xl border border-slate-200/70 bg-white shadow-soft
            transition-all duration-300 hover:-translate-y-1 hover:shadow-lift;
   }
 
+  /* Form controls */
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none
+           transition placeholder:text-slate-400 hover:border-slate-300
+           focus:border-brand focus:ring-4 focus:ring-brand/15;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-slate-700;
+  }
+
+  /* Typography */
+  .page-title {
+    @apply text-2xl font-extrabold tracking-tight text-ink sm:text-[28px];
+  }
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.14em] text-brand-dark;
+  }
+  .section-label {
+    @apply text-xs font-bold uppercase tracking-[0.12em] text-slate-400;
+  }
+
+  /* Alerts */
+  .alert-success { @apply rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800; }
+  .alert-error   { @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700; }
+  .alert-warn    { @apply rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800; }
+
   /* Decorative animated blob */
   .blob {
     @apply pointer-events-none absolute rounded-full blur-3xl opacity-60;
   }
+}
+
+/* Map markers (components/map/MapView.tsx) */
+.map-dot {
+  position: relative;
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: var(--dot);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
+}
+.map-dot-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  border: 3px solid var(--dot);
+  animation: map-pulse 1.8s ease-out infinite;
+}
+@keyframes map-pulse {
+  from { transform: scale(1); opacity: 0.8; }
+  to { transform: scale(2.6); opacity: 0; }
 }
 
 /* Staggered reveal helper: set --d inline */
@@ -68,7 +136,19 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.28); background-clip: content-box; }
 
+/* Route-network illustration (components/RouteNetwork.tsx) */
+.route-dash {
+  stroke-dasharray: 6 8;
+  animation: route-flow 1.6s linear infinite;
+}
+@keyframes route-flow {
+  to { stroke-dashoffset: -28; }
+}
+
 /* Respect users who prefer no motion */
+@media (prefers-reduced-motion: reduce) {
+  .motion-car { display: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
